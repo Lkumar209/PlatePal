@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlatePal - Culinary Transformation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f7f7f7;
+            --text-color: #333333;
+            --accent-color: #3d5a80;
+            --highlight-color: #98c1d9;
+            --error-color: #e63946;
+            --success-color: #2a9d8f;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            /* height: 100%; */
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 300;
+            font-size: 3.5rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            color: var(--accent-color);
+        }
+        h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 400;
+            font-size: 2rem;
+            margin-top: 0;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: var(--text-color);
+        }
+        .input-area {
+            margin-bottom: 2rem;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 1rem;
+            border: 1px solid var(--accent-color);
+            border-radius: 4px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+            background-color: transparent;
+            color: var(--text-color);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            resize: vertical;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: var(--highlight-color);
+            box-shadow: 0 0 0 3px rgba(166, 124, 82, 0.1);
+        }
+        .preference-group {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+        .preference-option {
+            margin: 0 1rem;
+        }
+        .preference-option input[type="radio"] {
+            display: none;
+        }
+        .preference-option label {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--accent-color);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        .preference-option input[type="radio"]:checked + label {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+        }
+        button {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Montserrat', sans-serif;
+            letter-spacing: 0.5px;
+        }
+        button:hover {
+            background-color: var(--highlight-color);
+        }
+        .loading {
+            text-align: center;
+            margin-top: 2rem;
+            font-style: italic;
+            color: var(--accent-color);
+        }
+        .recipe-section {
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .recipe-section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .recipe-section h3 {
+            font-family: 'Cormorant Garamond', serif;
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+        }
+        #error {
+            color: var(--error-color);
+            text-align: center;
+            margin-top: 1rem;
+            font-style: italic;
+        }
+        .success-message {
+            color: var(--success-color);
+            text-align: center;
+            margin-top: 1rem;
+            font-style: italic;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .elegant-hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--accent-color), transparent);
+            margin: 2rem 0;
+        }
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .secondary-button {
+            background-color: transparent;
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+        }
+        .secondary-button:hover {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+        }
+        /* Markdown-specific styles */
+        .markdown-content ul, .markdown-content ol {
+            padding-left: 2rem;
+        }
+        .markdown-content li {
+            margin-bottom: 0.5rem;
+        }
+        .markdown-content p {
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PlatePal</h1>
+        <h2>Transform Your Recipes</h2>
+        <form id="recipeForm">
+            <div class="input-area">
+                <textarea id="recipe" placeholder="Enter your recipe here..."></textarea>
+            </div>
+            <div class="preference-group">
+                <div class="preference-option">
+                    <input type="radio" id="vegan" name="preference" value="vegan" checked>
+                    <label for="vegan">Vegan</label>
+                </div>
+                <div class="preference-option">
+                    <input type="radio" id="gluten-free" name="preference" value="gluten-free">
+                    <label for="gluten-free">Gluten-Free</label>
+                </div>
+                <div class="preference-option">
+                    <input type="radio" id="low-carb" name="preference" value="low-carb">
+                    <label for="low-carb">Low-Carb</label>
+                </div>
+            </div>
+            <div style="text-align: center;">
+                <button type="submit">Transform</button>
+            </div>
+        </form>
+
+        <div id="loading" class="loading" style="display: none;">
+            Crafting your culinary masterpiece...
+        </div>
+
+        <div id="error" style="display: none;"></div>
+
+        <div class="elegant-hr"></div>
+
+        <div id="transformedRecipe"></div>
+
+        <div class="button-group" style="display: none;">
+            <button id="copyButton" class="secondary-button">Copy Recipe</button>
+            <button id="restartButton" class="secondary-button">Start Anew</button>
+        </div>
+
+        <div id="successMessage" class="success-message"></div>
+    </div>
+
+    <script>
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        document.getElementById('recipeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const recipe = document.getElementById('recipe').value;
+            const preference = document.querySelector('input[name="preference"]:checked').value;
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('transformedRecipe').innerHTML = '';
+            document.getElementById('error').style.display = 'none';
+            document.querySelector('.button-group').style.display = 'none';
+
+            try {
+                const response = await axios.post('/api/transform', `recipe=${encodeURIComponent(recipe)}&preference=${encodeURIComponent(preference)}`, {
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                });
+                
+                const transformedRecipe = response.data.transformed_recipe;
+                let transformedHtml = '';
+
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(transformedRecipe, "text/xml");
+                    
+                    if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
+                        throw new Error("XML parsing error");
+                    }
+
+                    const sections = [
+                        { tag: 'ingredient_list', title: 'Ingredients' },
+                        { tag: 'instructions', title: 'Instructions' },
+                        { tag: 'notes', title: 'Notes' }
+                    ];
+
+                    sections.forEach((section, index) => {
+                        const element = xmlDoc.getElementsByTagName(section.tag)[0];
+                        if (element && element.textContent.trim()) {
+                            const markdownContent = marked.parse(element.textContent.trim());
+                            transformedHtml += `
+                                <div class="recipe-section" style="transition-delay: ${index * 0.2}s;">
+                                    <h3>${section.title}</h3>
+                                    <div class="markdown-content">${markdownContent}</div>
+                                </div>
+                            `;
+                        }
+                    });
+                } catch (parseError) {
+                    console.error("Error parsing XML:", parseError);
+                    transformedHtml = `
+                        <div class="recipe-section">
+                            <h3>Transformed Recipe</h3>
+                            <div class="markdown-content">${marked.parse(transformedRecipe)}</div>
+                        </div>
+                    `;
+                }
+
+                document.getElementById('transformedRecipe').innerHTML = transformedHtml;
+                document.querySelector('.button-group').style.display = 'flex';
+                
+                // Trigger reflow to ensure transitions work
+                document.getElementById('transformedRecipe').offsetHeight;
+
+                document.querySelectorAll('.recipe-section').forEach(section => {
+                    section.classList.add('visible');
+                });
+            } catch (error) {
+                console.error("API Error:", error);
+                document.getElementById('error').textContent = 'A culinary mishap occurred. Shall we try again?';
+                document.getElementById('error').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+
+        document.getElementById('copyButton').addEventListener('click', () => {
+            const transformedRecipe = document.getElementById('transformedRecipe').innerText;
+            navigator.clipboard.writeText(transformedRecipe).then(() => {
+                const successMessage = document.getElementById('successMessage');
+                successMessage.textContent = 'Recipe gracefully copied to your clipboard.';
+                successMessage.style.opacity = '1';
+                setTimeout(() => {
+                    successMessage.style.opacity = '0';
+                }, 3000);
+            });
+        });
+
+        document.getElementById('restartButton').addEventListener('click', () => {
+            document.getElementById('recipe').value = '';
+            document.getElementById('transformedRecipe').innerHTML = '';
+            document.querySelector('.button-group').style.display = 'none';
+            document.getElementById('recipe').focus();
+        });
+
+        // Subtle background animation
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            document.body.style.background = `
+                radial-gradient(
+                    circle at ${x * 100}% ${y * 100}%,
+                    #f3e8d6 0%,
+                    #f8f5f2 50%
+                )
+            `;
+        });
+    </script>
+</body>
+</html>
