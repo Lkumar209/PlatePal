@@ -1,11 +1,26 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/transform.py", "use": "@vercel/python" },
-    { "src": "public/**", "use": "@vercel/static" }
+    {
+      "src": "public/index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "api/transform.py",
+      "use": "@vercel/python"
+    }
   ],
   "routes": [
-    { "src": "/api/transform", "dest": "/api/transform.py" },
-    { "src": "/(.*)", "dest": "/public/$1" }
-  ]
+    {
+      "src": "/api/transform",
+      "dest": "/api/transform.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/index.html"
+    }
+  ],
+  "env": {
+    "GROQ_API_KEY": "@groq_api_key"
+  }
 }
