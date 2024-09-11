@@ -1,16 +1,10 @@
 import os
-from flask import Flask, render_template, request, jsonify
+import json
 from groq import Groq
-from dotenv import load_dotenv
-
-app = Flask(__name__)
-
-# Load environment variables
-load_dotenv()
 
 # Initialize Groq client
 client = Groq(
-    api_key=os.getenv("GROQ_API_KEY"),
+    api_key=os.environ.get("GROQ_API_KEY"),
 )
 
 def create_system_message(preference):
@@ -52,35 +46,52 @@ def call_groq_api(recipe, preference):
                 {"role": "user", "content": user_message}
             ],
             model="llama-3.1-8b-instant",
-            max_tokens=2048,
+            max_tokens=8192,
             temperature=0.7,
         )
         return chat_completion.choices[0].message.content
     except Exception as e:
         return str(e)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/transform', methods=['POST'])
-def transform():
-    recipe = request.form['recipe']
-    preference = request.form['preference']
-    
-    if not recipe or not preference:
-        return jsonify({'error': 'Recipe and preference are required'}), 400
-    
-    transformed_recipe = call_groq_api(recipe, preference)
-    
-    if transformed_recipe.startswith('Error') or '<transformed_recipe>' not in transformed_recipe:
-        return jsonify({'error': 'Failed to transform the recipe. Please try again.'}), 500
-    
-    return jsonify({
-        'original_recipe': recipe,
-        'transformed_recipe': transformed_recipe,
-        'preference': preference
-    })
-
-if __name__ == '__main__':
-    app.run(debug=True)
+def handler(event, context):
+    if event['httpMethod'] == 'POST':
+        try:
+            body = json.loads(event['body'])
+            recipe = body.get('recipe', '')
+            preference = body.get('preference', '')
+        except json.JSONDecodeError:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'Invalid JSON in request body'})
+            }
+        
+        if not recipe or not preference:
+            return {
+                'statusCode': 400,
+                'body': json.dumps({'error': 'Recipe and preference are required'})
+            }
+        
+        transformed_recipe = call_groq_api(recipe, preference)
+        
+        if transformed_recipe.startswith('Error') or '<transformed_recipe>' not in transformed_recipe:
+            return {
+                'statusCode': 500,
+                'body': json.dumps({'error': 'Failed to transform the recipe. Please try again.'})
+            }
+        
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json'
+            },
+            'body': json.dumps({
+                'original_recipe': recipe,
+                'transformed_recipe': transformed_recipe,
+                'preference': preference
+            })
+        }
+    else:
+        return {
+            'statusCode': 405,
+            'body': json.dumps({'error': 'Method not allowed'})
+        }
